@@ -1,0 +1,83 @@
+---
+title: "Homework 01 Gapminder"
+author: "Jasmine Nakayama"
+date: "January 31, 2018"
+output:
+  html_document: default
+  pdf_document: default
+  word_document: default
+editor_options: 
+  chunk_output_type: console
+---
+Load packages:
+```{r}
+library(gapminder)
+library(ggplot2)
+```
+
+### **Homework 01 Exercise - Task 1**
+Modified to provide the standard deviation, median and sample size for life expectancy, set `digits=2`:
+
+The standard deviation of life expectancy is `r round(sd(gapminder$lifeExp), digits=2)` years. 
+The median life expectancy is `r round(median(gapminder$lifeExp), digits=2)` years. 
+The sample size for life expectancy is `r round(length(gapminder$lifeExp), digits=2)` years.
+
+
+### **Homework 01 Exercise - Task 2**
+
+Modified r code chunk to provide the mean and standard deviation for life expectancy by continent:
+
+```{r}
+aggregate(lifeExp ~ continent, gapminder, mean)
+```
+
+```{r}
+aggregate(lifeExp ~ continent, gapminder, sd)
+```
+
+### **Homework 01 Exercise - Task 3**
+
+Produces box plot with jittered points of GDP per capita by continents:
+```{r}
+library(ggplot2)
+ggplot(gapminder, aes(x = continent, y = gdpPercap)) +
+  geom_boxplot(outlier.colour = "hotpink") +
+  geom_jitter(position = position_jitter(width = 0.1, height = 0), alpha = 1/4)
+```
+Produces box plot with jittered points of population by continents:
+```{r}
+  library(ggplot2)
+ggplot(gapminder, aes(x = continent, y = pop)) +
+  geom_boxplot(outlier.colour = "hotpink") +
+  geom_jitter(position = position_jitter(width = 0.1, height = 0), alpha = 1/4)
+```
+
+### **Homework 01 Exercise - Task 4**
+
+Produces bubble splot for life expectancy by GDP per cpaita for Asia and Americas in 1992. Size of bubbles represents population size:
+```{r}
+gap_with_colors <-
+  data.frame(gapminder,
+             cc = I(country_colors[match(gapminder$country,
+                                         names(country_colors))]))
+                                         
+keepers <- with(gap_with_colors,
+                continent %in% c("Americas","Asia") & year == 1992)
+plot(lifeExp ~ gdpPercap, gap_with_colors,
+     subset = keepers, log = "x", pch = 21,
+     cex = sqrt(gap_with_colors$pop[keepers]/pi)/1500,
+     bg = gap_with_colors$cc[keepers])
+```
+
+### **Homework 01 Exercise - Task 5**
+
+Link to repository: [https://github.com/jynakay/N741Homework1](https://github.com/jynakay/N741Homework1).
+
+* If you have MiKTeX or MacTex installed and running on your computer, you can compile the report directly to PDF ("Knit to PDF"). However, if you didn't install these, you should still be able to "Knit to HTML" or "Knit to Word". Once you've got the HTML or Microsoft Word DOCX file created, you can print these to PDF.
+* Make sure your report completes the 4 tasks above with your associated R chunks along with a description or commentary on what you did and the result.
+* Submit the PDF homework using Canvas for N741
+* Include in your report a link to your Github repository with your RMD file and any other associated output you created. In the body of your Rmarkdown (RMD) report use the `[]()` syntax to embed the URL "web link". For example, the link for this exercise is located at [https://github.com/melindahiggins2000/N741gapminder1](https://github.com/melindahiggins2000/N741gapminder1) which was typed in to the Rmarkdown file as `[https://github.com/melindahiggins2000/N741gapminder1](https://github.com/melindahiggins2000/N741gapminder1)`.
+
+
+
+
