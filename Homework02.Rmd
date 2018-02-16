@@ -72,28 +72,35 @@ davisbmicat<-davisbmi%>%
                     "Missing"),
                 "Missing"))
 #get frequencies & relative percentages
-davisbmicat%>%
- count(bmicat)
 
-#not sure how to get relative percentages w/o janitor--LOOK UP LATER
+freq<-davisbmicat%>%
+count(bmicat)
+  
+davisbmicat%>%
+count(bmicat)%>%
+mutate(percentage=prop.table(freq$n))
+
 ```
 
 #Question 8: Create a histogram of BMI. 
-```{r}
+```{r message=FALSE}
 davisbmicat%>%
 ggplot()+geom_histogram(aes(bmi))
 ```
 
 There is one outlier whose BMI is over 500.
 
-#Question 9: Create side-by-side boxplots of the BMI distributions by gender
-```{r}
+```{r message=FALSE}
 #remove outlier
 newdavisbmicat<-davisbmicat%>%
   filter(bmi<100)
 #look at new histogram
 newdavisbmicat%>%
 ggplot()+geom_histogram(aes(bmi))
+```
+
+#Question 9: Create side-by-side boxplots of the BMI distributions by gender
+```{r}
 #create boxplot of BMI distribution divided by gender
 newdavisbmicat%>%
 ggplot(aes(x=sex, y=bmi, fill=bmi))+geom_boxplot()
