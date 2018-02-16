@@ -1,0 +1,106 @@
+---
+title: "Homework 2"
+author: "Jasmine Nakayama"
+date: "February 14, 2018"
+output:
+  html_document: default
+  word_document: default
+---
+
+Load packages:
+```{r setup, message=FALSE}
+library(car)
+library(dplyr)
+library(ggplot2)
+```
+
+#Question 1: What kind of R object is the Davis dataset?
+```{r}
+class(car::Davis)
+```
+#Question 2: How many observations are in the Davis dataset?
+```{r}
+car::Davis%>%
+  summarize(nObs=n())
+```
+#Question 3: For reported weight, how many observations have a missing value?
+```{r}
+sum(is.na(car::Davis$repwt)) 
+```
+#Question 4: How many observations have no missing values?
+```{r}
+car::Davis%>%
+filter(complete.cases(.))%>%
+  summarize(n())
+```
+#Question 5: Create a subset containing only females. How many females are in this subset?
+```{r}
+#create subset with only females
+females<-car::Davis%>% 
+filter(sex=='F')
+#count number in subset
+summarize(females,n())
+```
+
+#Question 6: What is the average BMI for these individuals?
+```{r}
+#create new variable with height in meters
+davishtmeter<-car::Davis%>%
+mutate(htmeter=height/100)
+#create new variable for BMI ("the ratio of the weight in kilograms divided by the square of the height in meters")"
+davisbmi<-davishtmeter%>%
+  mutate(bmi=weight/htmeter^2)
+#obtain average BMI
+davisbmi%>%
+  summarize(mean(bmi))
+```
+#Question 7: How do these individuals fall into the BMI categories (what are the frequencies and relative %'s)?
+
+Category    | BMI range (kg/m2)   
+ ----------- | ------------------- 
+ Underweight | <18.5              
+ Normal      | 18.5 to <25              
+ Overweight  | 25 to <30                
+ Obese       | 30 or higher   
+ 
+```{r}
+#create new categories for BMI ranges
+davisbmicat<-davisbmi%>%
+  mutate(bmicat=if_else(bmi<18.5, "Underweight", 
+                    if_else(bmi<25, "Normal", 
+                      if_else(bmi<30, "Overweight", "Obese","Missing"),
+                    "Missing"),
+                "Missing"))
+#get frequencies & relative percentages
+davisbmicat%>%
+ count(bmicat)
+
+#not sure how to get relative percentages w/o janitor--LOOK UP LATER
+```
+
+#Question 8: Create a histogram of BMI. 
+```{r}
+davisbmicat%>%
+ggplot()+geom_histogram(aes(bmi))
+```
+
+There is one outlier whose BMI is over 500.
+
+#Question 9: Create side-by-side boxplots of the BMI distributions by gender
+```{r}
+#remove outlier
+newdavisbmicat<-davisbmicat%>%
+  filter(bmi<100)
+#look at new histogram
+newdavisbmicat%>%
+ggplot()+geom_histogram(aes(bmi))
+#create boxplot of BMI distribution divided by gender
+newdavisbmicat%>%
+ggplot(aes(x=sex, y=bmi, fill=bmi))+geom_boxplot()
+```
+
+#Question 10: Create a clustered bar chart of the BMI categories by gender
+```{r}
+newdavisbmicat%>%
+ggplot(aes(x=bmicat, fill=sex))+geom_bar(position="dodge")
+```
