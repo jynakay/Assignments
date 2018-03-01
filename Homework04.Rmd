@@ -4,7 +4,7 @@ author: "Jasmine Nakayama"
 date: "February 28, 2018"
 output: html_document
 ---
-
+Repository: (https://github.com/jynakay/Assignments)[https://github.com/jynakay/Assignments] 
 ```{r setup chunk 0, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(stringr)
