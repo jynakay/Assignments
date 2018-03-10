@@ -1,0 +1,148 @@
+---
+title: "HW52018"
+author: "Jasmine Nakayama"
+date: "3/10/2018"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+Link to repository: https://github.com/jynakay/Assignments
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Download the dataset from the Canvas folder. Then let's load everything in:
+
+```{r}
+
+# Load all packages
+library(phyloseq)
+packageVersion("phyloseq")
+library(ggplot2) 
+packageVersion("ggplot2")
+library(RColorBrewer)
+packageVersion("RColorBrewer")
+
+#Load HMP data
+load("HMPv35.RData")
+HMPv35
+```
+####Problem 1
+
+Subset the HMPv35 object to obtain only the samples from Tongue_dorsum. Call this new object HMPv35sub2
+
+```{r}
+# Code to subset with new object HMPv35sub2
+sub <- get_variable(HMPv35, "HMPbodysubsite") %in% c("Tongue_dorsum")
+sample_data(HMPv35)$sub <- factor(sub)
+HMPv35sub2 <- prune_samples(sample_data(HMPv35)$sub == TRUE, HMPv35)
+summary(sample_data(HMPv35sub2))
+HMPv35sub2
+```
+
+####Problem 2
+
+Produce the geometric box plot of diversity measures for your object, HMPv35sub2
+```{r}
+#box plot for diversity here
+alpha_meas = c("Observed", "Chao1", "ACE", "Shannon", "Simpson", "InvSimpson")
+(p <- plot_richness(HMPv35sub2, "HMPbodysubsite", measures=alpha_meas))
+p + geom_boxplot(data=p$data, aes(x=HMPbodysubsite, y=value, color=NULL), alpha=0.1)
+```
+
+####Problem 3
+
+You see what taxa are most prevalent in your subset, HMPv35sub2
+
+```{r}
+#Calculate number of taxa in object
+ntaxa(HMPv35sub2)
+
+par(mar = c(10, 4, 4, 2) + 0.1) # make more room on bottom margin
+N <- 20
+barplot(sort(taxa_sums(HMPv35sub2), TRUE)[1:N]/nsamples(HMPv35sub2), las=2)
+
+```
+
+####Problem 4
+
+Using your HMPv35sub2 object, throw the rare taxa out of that object, then reduce to only taxa in the phylum Bacteroidetes. Call this new object HMPv35sub2frbac 
+
+```{r}
+
+#throw out the rare taxa from the HMPv35sub2 object with new object HMPv35sub2frbac
+
+#The next step filters out taxa with low occurrence throughout all samples
+HMPv35subsub = filter_taxa(HMPv35sub2, function(x) sum(x > 3) > (0.2*length(x)), TRUE)
+
+# The next step filters out all taxa that occur in less than .01% of samples
+HMPv35subr  <- transform_sample_counts(HMPv35subsub, function(x) x / sum(x) )
+HMPv35subfr <- filter_taxa(HMPv35subr, function(x) mean(x) > 1e-5, TRUE)
+HMPv35subfr
+
+#Finally subset to only bacteria in the phylum Bacteroidetes
+HMPv35sub2frbac = subset_taxa(HMPv35subfr, Phylum=="Bacteroidetes")
+HMPv35sub2frbac
+```
+
+####Problem 5
+Using your HMPv35sub2frbac object, what is the distribution of the top 20 OTU's?
+
+```{r}
+#Calculate number of taxa in object
+ntaxa(HMPv35sub2frbac)
+
+par(mar = c(10, 4, 4, 2) + 0.1) # make more room on bottom margin
+N <- 20
+barplot(sort(taxa_sums(HMPv35sub2frbac), TRUE)[1:N]/nsamples(HMPv35sub2frbac), las=2)
+
+```
+
+####Problem 6
+
+Plot sample abundance by body site for your object HMPv35sub2frbac
+
+```{r}
+#Pcode for the plot
+title = "plot_bar; by site; Bacteroidetes only"
+plot_bar(HMPv35sub2frbac, "HMPbodysubsite", "Abundance", title=title)
+
+```
+
+
+####Problem 7
+
+You try it with your HMPv35sub2frbac object
+
+```{r}
+
+#code for your plot with family here
+plot_bar(HMPv35sub2frbac, "HMPbodysubsite", "Abundance", "Phylum", title=title)
+
+```
+
+
+We can use the techniques of network science to illustrate how similar or distant samples are.
+
+Using our filtered object with all phyla, we use the `plot_net` function to illustrate the "proximity" (or similarity) of samples, while denoting site and the sex of the participant.
+
+```{r}
+plot_net(HMPv35subfr, maxdist = 0.3, color = "HMPbodysubsite", shape="sex")
+```
+
+Let's redo switching which variable is colored and which variable is differentiated by shape.
+
+```{r}
+plot_net(HMPv35subfr, maxdist = 0.3, shape = "HMPbodysubsite", color="sex")
+```
+####Problem 8
+
+Which method of display do you like best and why?
+
+```{r}
+
+#Place your answer here as another comment.
+#I like the second graph more, because it is easier to distinguish sex by color rather than by shape. There is higher contrast between the differences.
+
+```
