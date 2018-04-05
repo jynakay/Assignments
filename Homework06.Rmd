@@ -1,0 +1,128 @@
+---
+title: "Homework 6"
+author: "Jasmine Nakayama"
+date: "March 31, 2018"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+Link to repository:
+```{r setup}
+# load libraries and dataset
+library(tidyverse)
+library(haven)
+library(car)
+library(ROCR)
+helpdata <- haven::read_spss("helpmkh.sav")
+
+# choose variable
+h1 <- helpdata %>%
+  select(age, female, pss_fr, homeless, 
+         pcs, mcs, cesd)
+
+# add dichotomous variable to indicate depression for people with CESD scores >= 16
+h1 <- h1 %>%
+  mutate(cesd_gte16 = cesd >= 16)
+
+# change cesd_gte16 LOGIC variable type to numeric coded 1=TRUE and 0=FALSE
+h1$cesd_gte16 <- as.numeric(h1$cesd_gte16)
+
+# check final data subset h1
+summary(h1)
+```
+
+#1. [Model 1] Run a simple linear regression (`lm()`) for `cesd` using the `mcs` variable, which is the mental component quality of life score from the SF36.
+
+```{r 1}
+slr<-lm(cesd~mcs, data=h1)
+slr
+```
+
+#2. Write the equation of the final fitted model (i.e. what is the intercept and the slope)? Write a sentence describing the model results (interpret the intercept and slope). 
+_NOTE: The `mcs` values range form 0 to 100 where the population norm for "normal mental health quality of life" is considered to be a 50. If you score higher than 50 on the `mcs` you have mental health better than the population and visa versa - if your `mcs` scores are less than 50 then your mental health is considered to be worse than the population norm._
+
+`cesd=53.9022-0.6647*mcs`
+
+For every 1 point increase in MCS score, the CEDS score decreases by 0.6647. Generally, better mental health is associated with lower depression score. Those with an MCS score of 0 will have a CESD of 53.9022.
+
+#3. How much variability in the `cesd` does the `mcs` explain? (what is the R<sup>2</sup>?) Write a sentence describing how well the `mcs` does in predicting the `cesd`.
+
+```{r 3, include=FALSE}
+summary(slr)
+```
+The adjusted R<sup>2</sup> is 0.4638, which indicates that `cesd` accounts for 46.38% of the variability in `mcs`, which is fairly good for a simple linear regression model.
+
+#4. [Model 2] Run a second linear regression model (`lm()`) for the `cesd` putting in all of the other variables: 
+   
+```{r 4}
+mlr<-lm(cesd~age +female +pss_fr +homeless +pcs +mcs, data=h1)
+summary(mlr)
+```
+
+#5. Which variables are significant in the model? Write a sentence or two describing the impact of these variables for predicting depression scores (HINT: interpret the coefficient terms).
+
+When adjusting for the other variables in the model, the following variables are significant in the model: `female`, `pss_fr`, `pcs`, and `mcs`. When adjusting for the other variables, a 1 unit increase in `female` results in a 2.35028 increase in `cesd`, and a 1 unit increase in `pss_fr`, `pcs`, or `mcs` results in a 0.25569, 0.23639, or 0.62093 decrease in `cesd` respectively.
+
+#6. Following the example we did in class for the Prestige dataset [https://cdn.rawgit.com/vhertzb/2018week9/2f2ea142/2018week9.html?raw=true](https://cdn.rawgit.com/vhertzb/2018week9/2f2ea142/2018week9.html?raw=true), generate the diagnostic plots for this model with these 6 predictors (e.g. get the residual plot by variables, the added-variable plots, the Q-Q plot, diagnostic plots). Also run the VIFs to check for multicollinearity issues.
+
+```{r 6}
+residualPlots(mlr)
+avPlots(mlr, id.n=2, id.cex=0.7)
+qqPlot(mlr)
+outlierTest(mlr)
+influenceIndexPlot(mlr)
+influencePlot(mlr)
+vif(mlr)
+```
+
+#7. [Model 3] Repeat Model 1 above, except this time run a logistic regression (`glm()`) to predict CESD scores => 16 (using the `cesd_gte16` as the outcome) as a function of `mcs` scores. Show a summary of the final fitted model and explain the coefficients. [**REMEMBER** to compute the Odds Ratios after you get the raw coefficient (betas)].
+
+```{r message=FALSE}
+library(Rcmdr)
+
+glm <- glm(cesd_gte16 ~ age + female + homeless + mcs + pcs + pss_fr, 
+  family=binomial(logit), data=h1)
+summary(glm)
+exp(coef(glm))  # Exponentiated coefficients ("odds ratios")
+```
+
+NEED TO INTERPRET ODDS RATIO
+
+#8. Use the `predict()` function like we did in class to predict CESD => 16 and compare it back to the original data. For now, use a cutoff probability of 0.5 - if the probability is > 0.5 consider this to be true and false otherwise. Like we did in class. **REMEMBER** See the R code for the class example at [https://github.com/melindahiggins2000/N741_lecture11_27March2018/blob/master/lesson11_logreg_Rcode.R](https://github.com/melindahiggins2000/N741_lecture11_27March2018/blob/master/lesson11_logreg_Rcode.R)
+    + How well did the model correctly predict CESD scores => 16 (indicating depression)? (make the "confusion matrix" and look at the true positives and true negatives versus the false positives and false negatives).
+  
+```{r 8}
+glm.predict <- predict(glm, newdata=h1,
+                      type="response")
+table(h1$cesd_gte16, glm.predict > 0.5)
+t1 <- table(glm.predict > 0.5, h1$cesd_gte16)
+t1
+```
+The model was able to predict 393 of the 415 true cases CESD scores =>6.
+
+#9. Make an ROC curve plot and compute the AUC and explain if this is a good model for predicting depression or not
+
+```{r 9}
+p <- predict(glm, newdata=h1, 
+             type="response")
+pr <- prediction(p, as.numeric(h1$cesd_gte16))
+prf <- performance(pr, measure = "tpr", x.measure = "fpr")
+plot(prf)
+abline(a=0, b=1, col="red")
+
+auc <- performance(pr, measure = "auc")
+auc <- auc@y.values[[1]]
+auc
+```
+
+AUC of 0.93 is great, so this is a good model to predict depression.
+
+#10. Make a plot showing the probability curve - put the `mcs` values on the X-axis and the probability of depression on the Y-axis. Based on this plot, do you think the `mcs` is a good predictor of depression? [**FYI** This plot is also called an "effect plot" is you're using `Rcmdr` to do these analyses.]
+
+```{r 10}
+
+plot(h1$mcs, glm.predict)
+```
+
+HOW DO YOU INTERPRET?? MCS less than 30 seems to indicate 1.0 for prediction, then negative slope.
