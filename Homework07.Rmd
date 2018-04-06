@@ -224,7 +224,7 @@ plot(gg_mdVIMP)
 
 ### **PROBLEM 10: Create Plots of How Well Each Variable Predicts CESD**
 
-```{r}
+```{r Q10}
 #Create the variable dependence object from the random forest
 gg_v <- ggRandomForests::gg_variable(fitallrf)
 
