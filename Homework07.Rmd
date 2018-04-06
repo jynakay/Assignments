@@ -1,0 +1,237 @@
+---
+title: "Homework 7"
+author: "Jasmine Nakayama"
+date: "April 6, 2018"
+output: html_document
+---
+
+Link to repository: (https://github.com/jynakay/Assignments)[https://github.com/jynakay/Assignments] 
+
+```{r setup, warning=FALSE, message=FALSE}
+# load libraries and dataset
+library(tidyverse)
+library(haven)
+library(car)
+library(ROCR)
+library(rpart)
+library(partykit)
+library(reshape2)
+library(party)
+library(randomForestSRC)
+library(ggRandomForests)
+```
+
+```{r create dataset}
+helpdata <- haven::read_spss("helpmkh.sav")
+
+h1 <- helpdata %>%
+  select(age, female, pss_fr, homeless, 
+         pcs, mcs, cesd)
+
+# add dichotomous variable
+# to indicate depression for
+# people with CESD scores >= 16
+# and people with mcs scores < 45
+
+h1 <- h1 %>%
+  mutate(cesd_gte16 = cesd >= 16) %>%
+  mutate(mcs_lt45 = mcs < 45)
+
+# change cesd_gte16 and mcs_lt45 LOGIC variable type
+# to numeric coded 1=TRUE and 0=FALSE
+
+h1$cesd_gte16 <- as.numeric(h1$cesd_gte16)
+h1$mcs_lt45 <- as.numeric(h1$mcs_lt45)
+
+# add a label for these 2 new variables
+attributes(h1$cesd_gte16)$label <- "Indicator of Depression"
+attributes(h1$mcs_lt45)$label <- "Indicator of Poor Mental Health"
+```
+### **PROBLEM 1: Regression Tree for MCS**
+
+```{r P1}
+# fit a regression tree model to the mcs as the outcome
+# and using the cesd as the only predictor
+fitmcs <- rpart::rpart(mcs ~ cesd, data = h1)
+rpart::printcp(fitmcs) # Display the results
+rpart::plotcp(fitmcs) # Visualize cross-validation results
+summary(fitmcs) # Detailed summary of fit
+
+# plot tree
+plot(fitmcs, uniform = TRUE, compress = FALSE)
+text(fitmcs, use.n = TRUE, all = TRUE, cex = 0.5)
+```
+
+### **PROBLEM 2: Matrix Scatterplot of Other Variables with MCS**
+
+```{r P2}
+# all vars except the dichotomous cesd_gte16 and mcs_lt45
+h1a <- h1[,1:7]
+
+# Melt the other variables down and link to mcs
+h1m <- reshape2::melt(h1a, id.vars = "mcs")
+
+# Plot panels for each covariate
+ggplot(h1m, aes(x=mcs, y=value)) +
+  geom_point(alpha=0.4)+
+  scale_color_brewer(palette="Set2")+
+  facet_wrap(~variable, scales="free_y", ncol=3)
+```
+
+### **PROBLEM 3: Regression Tree for MCS Using Rest of Variables**
+
+```{r Q3}
+# fit a regression tree with all vars
+fitall <- rpart::rpart(mcs ~ ., data = h1a)
+
+# equivalent code statement without the shorthand
+# using the period for the "rest of the variables"
+# this time each variable to be included is listed
+# individually putting a plus + in between each 
+# variable added to the model
+
+fitall <- rpart::rpart(mcs ~ age + female + pss_fr + 
+                              homeless + pcs + cesd, 
+                              data = h1a)
+
+# Now let's look at fitall
+rpart::printcp(fitall) # Display the results
+rpart::plotcp(fitall) # Visualize cross-validation results
+summary(fitall) # Detailed summary of fit
+
+plot(fitall, uniform = TRUE, compress = FALSE, main = "Regression Tree for MCS Scores from HELP(h1) Data")
+text(fitall, use.n = TRUE, all = TRUE, cex = 0.5)
+```
+
+### **PROBLEM 4: Fit a Conditional Regression Tree for MCS**
+
+```{r Q4}
+fitallp <- party::ctree(mcs ~ ., data = h1a)
+plot(fitallp, main = "Conditional Inference Tree for MCS")
+```
+
+### **PROBLEM 5: Fit a Logistic Regression Model for MCS < 45**
+
+```{r q5}
+# begin with a logistic regression - poor mental health or not
+glm1 <- glm(mcs_lt45 ~ age + female + pss_fr + homeless + 
+              pcs + cesd, data = h1)
+summary(glm1)
+```
+This model is different from the model for cesd_gte16. This model shows that `cesd` is significant, whereas the cesd_gte16 model has `pcs` and `mcs` as significant variables. Additionally, all the variables had negative estimates in the cesd_gte16 model, whereas this model shows `age` and `pss_fr` as positive.
+
+### **PROBLEM 6: Fit a Classification Tree for MCS < 45**
+
+```{r Q6}
+fitk <- rpart::rpart(mcs_lt45 ~ age + female + pss_fr + 
+                       homeless + pcs + cesd, 
+                     method = "class", data = h1)
+class(fitk)
+# Display the results
+rpart::printcp(fitk)
+#Visualize the cross-validation results 
+rpart::plotcp(fitk)
+# Get a detailed summary of the splits
+summary(fitk)
+# Plot the tree
+plot(fitk, uniform = TRUE, 
+     main = "Classification Tree for MCS < 45")
+text(fitk, use.n = TRUE, all = TRUE, cex = 0.8)
+```
+
+### **PROBLEM 7: Fit a Conditional Classification Tree for MCS < 45**
+
+```{r Q7}
+# look at mcs_lt45 with ctree from party
+fitallpk <- party::ctree(mcs_lt45 ~ age + female + pss_fr + 
+                           homeless + pcs + cesd, data = h1)
+class(fitallpk)
+plot(fitallpk, main = "Conditional Inference Tree for MCS<45")
+```
+
+### **PROBLEM 8: Recursive Partitioning of Classification Tree for MCS < 45**
+
+```{r Q8}
+# Recursive partitioning of MCS<45 on age, 
+# female, pss_fr, homeless, pcs, cesd
+whoIsDepressed <- rpart::rpart(mcs_lt45 ~ age + female + 
+                                 pss_fr + homeless + pcs + cesd,
+                               data = h1, 
+                               control = rpart.control(cp = 0.001,
+                                                       minbucket = 20))
+
+whoIsDepressed
+
+library(partykit)
+# Plot the tree
+plot(partykit::as.party(whoIsDepressed))
+```
+
+### **EXTRA CREDIT Scatterplot of recursive partitions for MCS < 45 for PCS and CESD**
+
+```{r EC}
+# EXTRA CREDIT
+# Graph as partition
+# using the break points shown from the
+# conditional tree
+ggplot(data = h1, aes(x = cesd, y = pcs)) +
+  geom_count(aes(color = mcs_lt45), alpha = 0.5) +
+  geom_vline(xintercept = 24.5) +
+  geom_vline(xintercept = 11.5) +
+  geom_segment(x = 11.5, xend = 0, y = 59.00035, yend = 59.00035) +
+  geom_segment(x = 11.5, xend = 0, y = 49.7901, yend = 49.7901) +
+  geom_vline(xintercept = 41.5) +
+  geom_segment(x = 41.5, xend = 24.5, y = 50.23704, yend = 50.23704) +
+  geom_segment(x = 41.5, xend = 24.5, y = 54.12466, yend = 54.12466) +
+  annotate("rect", xmin = 0, xmax = 100, ymin = 0, ymax = 100, fill = "blue", alpha = 0.1) +
+  ggtitle("MCS <45 Partitioned By CESD and PCS")
+```
+
+### **PROBLEM 9: Fit a Random Forest Model for MCS**
+
+```{r Q9}
+h1 <- as.data.frame(h1)
+set.seed(131)
+# Random Forest for the h1 dataset
+fitallrf <- randomForestSRC::rfsrc(mcs ~ age + female + 
+                                     pss_fr + homeless + pcs + cesd, 
+                                   data = h1, ntree = 100, 
+                                   tree.err=TRUE)
+# view the results
+fitallrf
+gg_e <- ggRandomForests::gg_error(fitallrf)
+plot(gg_e)
+
+# Plot the predicted cesd values
+plot(ggRandomForests::gg_rfsrc(fitallrf), alpha = 0.5)
+
+# Plot the VIMP rankins of independent variables
+plot(ggRandomForests::gg_vimp(fitallrf))
+
+# Select the variables
+varsel_mcs <- randomForestSRC::var.select(fitallrf)
+glimpse(varsel_mcs)
+
+# Save the gg_minimal_depth object for later use
+gg_md <- ggRandomForests::gg_minimal_depth(varsel_mcs)
+# Plot the object
+plot(gg_md)
+
+# Plot minimal depth v VIMP
+gg_mdVIMP <- ggRandomForests::gg_minimal_vimp(gg_md)
+plot(gg_mdVIMP)
+```
+
+### **PROBLEM 10: Create Plots of How Well Each Variable Predicts CESD**
+
+```{r}
+#Create the variable dependence object from the random forest
+gg_v <- ggRandomForests::gg_variable(fitallrf)
+
+# Use the top ranked minimal depth variables only, plotted in minimal depth rank order
+xvar <- gg_md$topvars
+
+# Plot the variable list in a single panel plot
+plot(gg_v, xvar = xvar, panel = TRUE, alpha = 0.4) +
+  labs(y="Predicted MCS reading", x="")
+```

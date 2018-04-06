@@ -1,13 +1,14 @@
 ---
 title: "Homework 6"
 author: "Jasmine Nakayama"
-date: "March 31, 2018"
+date: "April 6, 2018"
 output:
   html_document: default
   pdf_document: default
 ---
 
-Link to repository:
+Link to repository: (https://github.com/jynakay/Assignments)[https://github.com/jynakay/Assignments] 
+
 ```{r setup}
 # load libraries and dataset
 library(tidyverse)
@@ -87,7 +88,7 @@ summary(glm)
 exp(coef(glm))  # Exponentiated coefficients ("odds ratios")
 ```
 
-NEED TO INTERPRET ODDS RATIO
+The coeficients indicate the probability that a variable will increase or decrease the probability of an event when adjusting for all the other variables. For instance, when adjusting for sex, homelessness, MCS, PCS, and PSS, an increase in age is associated with a 0.009384 decrease in probability of CESD greater than 16.
 
 #8. Use the `predict()` function like we did in class to predict CESD => 16 and compare it back to the original data. For now, use a cutoff probability of 0.5 - if the probability is > 0.5 consider this to be true and false otherwise. Like we did in class. **REMEMBER** See the R code for the class example at [https://github.com/melindahiggins2000/N741_lecture11_27March2018/blob/master/lesson11_logreg_Rcode.R](https://github.com/melindahiggins2000/N741_lecture11_27March2018/blob/master/lesson11_logreg_Rcode.R)
     + How well did the model correctly predict CESD scores => 16 (indicating depression)? (make the "confusion matrix" and look at the true positives and true negatives versus the false positives and false negatives).
